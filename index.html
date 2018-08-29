@@ -1,0 +1,100 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="UTF-8">
+		<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<title>GUESS Verifier</title>
+	<script src="js/jquery.js"></script>
+	<link rel="stylesheet" href="css/bootstrap.css">
+	<script src="js/hmac-sha512.js"></script>
+	<script src="js/sha512.js"></script>
+	<script src="js/enc-base64-min.js"></script>
+	<script src="js/sha256.js"></script>
+</head>
+<body>
+	<div class="jumbotron">
+		<h2>GUESS Verifier</h2>
+	</div>
+	<div class="container">
+		<div class="well">
+			<center>
+				<h2>GUESS Verifier</h2>
+
+				<div class="cont">
+					<textarea class="form-control" id="serverSeedHash" placeholder="Hash of server seed（服務器種子散列）"></textarea>
+					<br>
+					<textarea class="form-control" id="ss" placeholder="Server seed（服務器種子）"></textarea>
+					<br>
+					<textarea class="form-control" id="ClientSeed" placeholder="Client seed（客戶端種子）"></textarea>
+					<br>
+					<input class="form-control" id="sn" placeholder="Starting nonce(起始) (>=1)" type="number"></input>
+					<br>
+					<input class="form-control" id="nb" placeholder="Number of Bets（投注次數） (>=1)" type="number"></input>
+					<br>
+					<button class="btn btn-default" id="verify">Verify</button>
+				</div>
+
+				<h2>Results:</h2>
+
+				<div class="cont">
+					<p id="results"></p>
+				</div>
+			</center>
+		</div>
+	</div>
+	<script type="text/javascript">
+		function check(event, ignoreInput) {
+			var serverSeedHash = $('#serverSeedHash').value;
+			var ss = document.getElementById('ss').value;
+			var ClientSeed = document.getElementById('ClientSeed').value;
+			var sn = document.getElementById('sn').value;
+			sn = parseInt(sn);
+			var nb = document.getElementById('nb').value;
+			nb = parseInt(nb);
+	
+			document.getElementById('results').innerHTML = '';
+			if (serverSeedHash != check.lastserverSeedHash) { // Let's not repeat 'hash is correct' for the same hash.
+				serverSeedHash2 = CryptoJS.SHA256(ss);
+				if (serverSeedHash2 + '' == serverSeedHash) {
+					println('<span class="label label-success">Server secret hash is correct</span>');
+				} else {
+					println('<span class="label label-danger">Server hash check failed!</span>');
+					println('Purported hash: ' + serverSeedHash);
+					println('Actual hash: ' + serverSeedHash2);
+				}
+			}
+	
+			for (j = sn + nb-2 ; j >= sn-1; j--) {
+				hash = CryptoJS.HmacSHA512(ClientSeed + ':' + j, ss).toString(CryptoJS.enc.Hex);
+				i = 0;
+				roll = -1;
+				while (roll == -1) { // Non-reference implementation derived from the 'Fair?' description.
+					if (i == 25) {
+						l3 = hash.substring(125, 128);
+						l3p = l3.parseInt(l3, 16);
+						println('last 3: ' + l3 + ' as int: ' + l3p); // kept on because it's cool to get this far
+						roll = l3p / 10000;
+					} else {
+						f5 = hash.substring(5 * i, 5 + 5 * i);
+						f5p = parseInt(f5, 16);
+						//println(f5 + ' as int: ' + f5p);
+						if (f5p < 1000000) {
+							roll = f5p / 10000;
+						}
+						i++;
+					}
+				}
+				println(j+1+ ': ' + roll);
+			}
+			check.lastserverSeedHash = serverSeedHash;
+		}
+	
+		function println(s) {
+			results = document.getElementById('results');
+			results.innerHTML = results.innerHTML + s + '<br>';
+		}
+
+		document.getElementById('verify').addEventListener('click', check);
+	</script>
+</body>
+</html>
